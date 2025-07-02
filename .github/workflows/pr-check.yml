@@ -1,0 +1,22 @@
+name: Comment-Based Test
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  check-comment:
+    if: github.event.issue.pull_request != null  # Only run on PRs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check comment content
+        run: |
+          echo "Comment body: ${{ github.event.comment.body }}"
+          if [[ "${{ github.event.comment.body }}" == *"pass"* ]]; then
+            echo "✅ Comment says 'pass'."
+            exit 0
+          else
+            echo "❌ Comment does not say 'pass'. Failing."
+            exit 1
+          fi
