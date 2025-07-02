@@ -1,48 +1,22 @@
-name: Create Check Run from Comment
+name: Comment-Based Test
 
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  comment-check:
-    if: github.event.issue.pull_request != null  # Only respond to PRs
+  check-comment:
+    if: github.event.issue.pull_request != null  # Only run on PRs
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      contents: read
 
     steps:
-      - name: Extract comment content
-        id: check
+      - name: Check comment content
         run: |
-          COMMENT="${{ github.event.comment.body }}"
-          echo "Comment: $COMMENT"
-
-          if [[ "$COMMENT" == *"pass"* ]]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          elif [[ "$COMMENT" == *"fail"* ]]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
+          echo "Comment body: ${{ github.event.comment.body }}"
+          if [[ "${{ github.event.comment.body }}" == *"pass"* ]]; then
+            echo "✅ Comment says 'pass'."
+            exit 0
           else
-            echo "status=neutral" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Create Check Run via GitHub API
-        if: steps.check.outputs.status != 'neutral'
-        run: |
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/check-runs \
-            -d @- <<EOF
-          {
-            "name": "Comment Result",
-            "head_sha": "${{ github.event.pull_request.head.sha }}",
-            "status": "completed",
-            "conclusion": "${{ steps.check.outputs.status }}",
-            "output": {
-              "title": "Comment-Based Check",
-              "summary": "Status based on PR comment: '${{ github.event.comment.body }}'"
-            }
-          }
-EOF
+            echo "❌ Comment does not say 'pass'. Failing."
+            exit 1
+          fi
